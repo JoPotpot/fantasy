@@ -1,3 +1,5 @@
 *.pyc
 */__pycache__/*
 fetchenv/
+connector/api_key.txt
+.vscode/

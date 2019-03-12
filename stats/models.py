@@ -28,3 +28,12 @@ class Sport_event(models.Model):
             winner = 'Draw'
         return winner
 
+
+
+class Competition(models.Model):
+    
+    api_id = models.CharField(max_length=256, default='') 
+    name = models.CharField(max_length=256, default='')
+        
+    def __str__(self):
+        return self.name + ' (' + self.api_id + ')'

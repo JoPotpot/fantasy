@@ -1,12 +1,19 @@
 import http.client
 import sys
 import json
+import logging
+
 from datetime import datetime
 
-from stats.models import Sport_event    
+from stats.models import Sport_event, Competition    
+from connector import connectors
+
+_log = logging.getLogger(__name__)
 
 
 DATA_FILE = "./stats/static/data.json"
+API = connectors.HandballV2API()
+
 
 def fetch_data_json():
     conn = http.client.HTTPSConnection("api.sportradar.com")
@@ -47,7 +54,37 @@ def load_data_json():
                             event_date=event_date)
         event.save()
 
-    import ipdb; ipdb.set_trace()
+
+def load_competitions():
+    comp_json = API.get_competitions_list().json()
+
+    entries = {
+        'imported': 0,
+        'updated': 0,
+        'in_error': [],
+    }
+    for competition in comp_json['competitions']:
+        api_id = competition['id'] if competition.get('id') else ''
+        name = competition['name'] if competition.get('name') else ''
+        existing_comp = Competition.objects.filter(api_id=api_id)
+        if len(existing_comp):
+            try:
+                comp = existing_comp[0]
+                comp.name = name
+                entries['updated'] += 1
+                comp.save()
+            except:
+                entries['in_error'].append(comp)
+        else:
+            try:
+                comp = Competition(api_id=api_id, name=name)
+                comp.save()
+                entries['imported'] += 1
+            except:
+                entries['in_error'].append(comp)
+    
+    _log.info(entries)
+    print(entries)
 
 
 if __name__ == "__main__":
