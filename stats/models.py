@@ -4,13 +4,13 @@ from django.utils import timezone
 
 
 
-class Sport_event(models.Model):
+class SportEvent(models.Model):
     
-    home_team = models.CharField(max_length=256, default='<home team>') 
-    away_team = models.CharField(max_length=256, default='<home team>')
+    home_team = models.ForeignKey('Team', related_name='home_team', on_delete=models.SET_NULL, null=True)
+    away_team = models.ForeignKey('Team', related_name='away_team', on_delete=models.SET_NULL, null=True)
     home_team_score = models.IntegerField(default=0)
     away_team_score = models.IntegerField(default=0)
-    competition_name = models.CharField(max_length=256)
+    competition_name = models.ForeignKey('Competition', on_delete=models.SET_NULL, null=True)
     event_date = models.DateField(null=True)
     
     def __str__(self):
@@ -37,3 +37,90 @@ class Competition(models.Model):
         
     def __str__(self):
         return self.name + ' (' + self.api_id + ')'
+
+class Season(models.Model):
+    
+    api_id = models.CharField(max_length=256, default='') 
+    name = models.CharField(max_length=256, default='')
+    start_date = models.DateField()
+    end_date = models.DateField()
+    year = models.CharField(max_length=10)
+    competition = models.ForeignKey('Competition', on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return self.name + ' (' + self.api_id + ')'
+
+
+
+
+class Team(models.Model):
+
+    api_id = models.CharField(max_length=256, default='')
+    name = models.CharField(max_length=256, default='')
+    country_code = models.CharField(max_length=4, default='')
+    abbreviation = models.CharField(max_length=10, default='')
+    manager = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
+    competitions = models.ManyToManyField(Competition)
+
+    def __str__(self):
+        return self.name + ' (' + self.api_id + ')'
+        
+class Player(models.Model):
+
+    LEFT_BACK = 'LB'
+    RIGHT_BACK = 'RB'
+    LEFT_WING = 'LW'
+    RIGHT_WING = 'RW'
+    GOALKEEPER = 'G'
+    PIVOT = 'P'
+    CENTER_BACK = 'CB'
+    MANAGER = 'MG'
+    UNKNOWN = 'UK'
+    ROLE_CHOICES = (
+        (LEFT_BACK, 'Left back'),
+        (RIGHT_BACK, 'Right back'),
+        (LEFT_WING, 'Left wing'),
+        (RIGHT_WING, 'Right wing'),
+        (GOALKEEPER, 'Goal keeper'),
+        (PIVOT, 'Pivot'),
+        (CENTER_BACK, 'Center back'),
+        (MANAGER, 'Manager'),
+        (UNKNOWN, 'Unknown'),
+    )
+
+    api_id = models.CharField(max_length=256, default='')
+    name = models.CharField(max_length=256, default='')
+    player_type = models.CharField(
+        max_length=2,
+        choices=ROLE_CHOICES,
+        default=UNKNOWN,
+    ),
+    birthdate = models.DateField()
+    nationality = models.CharField(max_length=256, default='')
+    country_code = models.CharField(max_length=4, default='')
+    height = models.IntegerField()
+    weight = models.IntegerField()
+    jersey_number = models.IntegerField()
+    team_id = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return self.name + ' - ' + self.team_id.name + ' (' + self.api_id + ')'
+
+class Statistics(models.Model):
+    
+    player = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
+    game = models.ForeignKey('SportEvent', on_delete=models.SET_NULL, null=True)
+    yellow_cards = models.IntegerField()
+    red_cards = models.IntegerField()
+    suspensions = models.IntegerField()
+    goals_scored = models.IntegerField()
+    seven_m_goals = models.IntegerField()
+    field_goals = models.IntegerField()
+    assists = models.IntegerField()
+    technical_fouls = models.IntegerField()
+    steals = models.IntegerField()
+    blocks = models.IntegerField()
+    saves = models.IntegerField()
+
+    def __str__(self):
+        return self.player.name + ' (' + self.game.name + ')'

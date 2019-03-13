@@ -5,7 +5,7 @@ import logging
 
 from datetime import datetime
 
-from stats.models import Sport_event, Competition    
+from stats.models import SportEvent, Competition, Season, Team, Player, Statistics  
 from connector import connectors
 
 _log = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def load_data_json():
         date = game['sport_event']['start_time'] 
         event_date = datetime.strptime(date[0:10],'%Y-%m-%d') or None
         
-        event = Sport_event(home_team=home_team, 
+        event = SportEvent(home_team=home_team, 
                             away_team=away_team, 
                             away_team_score=away_team_score, 
                             home_team_score=home_team_score,
@@ -83,8 +83,53 @@ def load_competitions():
             except:
                 entries['in_error'].append(comp)
     
-    _log.info(entries)
-    print(entries)
+    _log.info('competitions entries : ' + entries)
+    print('competitions entries : ' + entries)
+
+def load_competition_seasons(competition_id):
+    seasons_json = API.get_competition_seasons(competition_id).json()
+
+    entries = {
+        'imported': 0,
+        'updated': 0,
+        'in_error': [],
+    }
+    for season in seasons_json['seasons']:
+        api_id = season['id'] if season.get('id') else ''
+        name = season['name'] if season.get('name') else ''
+        start_date = season['start_date'] if season.get('start_date') else ''
+        end_date = season['end_date'] if season.get('end_date') else ''
+        year = season['year'] if season.get('year') else ''
+        competition = Competition.objects.get(api_id = competition_id)
+
+        existing_season = Season.objects.filter(api_id=api_id)
+        if len(existing_season):
+            try:
+                season = existing_season[0]
+                season.name = name
+                entries['updated'] += 1
+                season.save()
+            except:
+                entries['in_error'].append(season)
+        else:
+            try:
+                season = Season(api_id=api_id, 
+                                name=name, 
+                                start_date=start_date, 
+                                end_date=end_date,
+                                year=year,
+                                competition=competition,
+                                )
+                season.save()
+                entries['imported'] += 1
+            except:
+                entries['in_error'].append(season)
+    
+    _log.info('Seasons entries : ' + str(entries))
+    print('Seasons entries : ' + str(entries))
+
+
+
 
 
 if __name__ == "__main__":
