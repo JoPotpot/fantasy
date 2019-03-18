@@ -3,7 +3,6 @@ from django.utils import timezone
 
 
 
-
 class SportEvent(models.Model):
     
     home_team = models.ForeignKey('Team', related_name='home_team', on_delete=models.SET_NULL, null=True)
@@ -29,7 +28,6 @@ class SportEvent(models.Model):
         return winner
 
 
-
 class Competition(models.Model):
     
     api_id = models.CharField(max_length=256, default='') 
@@ -38,6 +36,7 @@ class Competition(models.Model):
     def __str__(self):
         return self.name + ' (' + self.api_id + ')'
 
+
 class Season(models.Model):
     
     api_id = models.CharField(max_length=256, default='') 
@@ -45,26 +44,26 @@ class Season(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     year = models.CharField(max_length=10)
-    competition = models.ForeignKey('Competition', on_delete=models.SET_NULL, null=True)
+    competition_id = models.ForeignKey('Competition', on_delete=models.SET_NULL, null=True)
+    team_ids = models.ManyToManyField('Team')
 
     def __str__(self):
         return self.name + ' (' + self.api_id + ')'
-
-
 
 
 class Team(models.Model):
 
     api_id = models.CharField(max_length=256, default='')
     name = models.CharField(max_length=256, default='')
+    country = models.CharField(max_length=64, default='')
     country_code = models.CharField(max_length=4, default='')
     abbreviation = models.CharField(max_length=10, default='')
-    manager = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
-    competitions = models.ManyToManyField(Competition)
-
+    manager_id = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
+    competition_ids = models.ManyToManyField('Competition')
     def __str__(self):
         return self.name + ' (' + self.api_id + ')'
-        
+
+
 class Player(models.Model):
 
     LEFT_BACK = 'LB'
@@ -106,10 +105,11 @@ class Player(models.Model):
     def __str__(self):
         return self.name + ' - ' + self.team_id.name + ' (' + self.api_id + ')'
 
+
 class Statistics(models.Model):
     
-    player = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
-    game = models.ForeignKey('SportEvent', on_delete=models.SET_NULL, null=True)
+    player_id = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
+    game_id = models.ForeignKey('SportEvent', on_delete=models.SET_NULL, null=True)
     yellow_cards = models.IntegerField()
     red_cards = models.IntegerField()
     suspensions = models.IntegerField()

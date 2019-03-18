@@ -1,18 +1,39 @@
 import http.client
 import sys
 import json
-import logging
 
 from datetime import datetime
 
 from stats.models import SportEvent, Competition, Season, Team, Player, Statistics  
 from connector import connectors
 
-_log = logging.getLogger(__name__)
-
 
 DATA_FILE = "./stats/static/data.json"
 API = connectors.HandballV2API()
+
+"""
+param filter_fields: requested fields to recognize duplicates
+param change_fields: fields that will be updated
+param fixed_fields: fields that wont be updated, but used at creation
+"""
+def _update_from_API(model, entries={}, 
+                    filter_fields=None, 
+                    change_fields=None, 
+                    fixed_fields=None):
+    try:
+        existing_obj = model.objects.get(**filter_fields)
+
+        for key, value in change_fields.items(): 
+            setattr(existing_obj, key, value)      
+        existing_obj.save()
+        entries['updated'] += 1
+
+    except model.DoesNotExist:
+        new_obj = model(**filter_fields, **change_fields, **fixed_fields)
+        new_obj.save()
+        entries['imported'] += 1
+    except Exception: 
+        entries['in_error'].append(Exception + str(filter_fields))
 
 
 def fetch_data_json():
@@ -66,28 +87,15 @@ def load_competitions():
     for competition in comp_json['competitions']:
         api_id = competition['id'] if competition.get('id') else ''
         name = competition['name'] if competition.get('name') else ''
-        existing_comp = Competition.objects.filter(api_id=api_id)
-        if len(existing_comp):
-            try:
-                comp = existing_comp[0]
-                comp.name = name
-                entries['updated'] += 1
-                comp.save()
-            except:
-                entries['in_error'].append(comp)
-        else:
-            try:
-                comp = Competition(api_id=api_id, name=name)
-                comp.save()
-                entries['imported'] += 1
-            except:
-                entries['in_error'].append(comp)
+        _update_from_API(Competition, entries, 
+                        filter_fields={'api_id': api_id},
+                        change_fields={'name': name}
+                        )
     
-    _log.info('competitions entries : ' + entries)
-    print('competitions entries : ' + entries)
+    print('competitions entries : ' + str(entries))
 
-def load_competition_seasons(competition_id):
-    seasons_json = API.get_competition_seasons(competition_id).json()
+def load_competition_seasons(competition):
+    seasons_json = API.get_competition_seasons(competition).json()
 
     entries = {
         'imported': 0,
@@ -100,38 +108,51 @@ def load_competition_seasons(competition_id):
         start_date = season['start_date'] if season.get('start_date') else ''
         end_date = season['end_date'] if season.get('end_date') else ''
         year = season['year'] if season.get('year') else ''
-        competition = Competition.objects.get(api_id = competition_id)
+        competition_id = Competition.objects.get(api_id = competition)
 
-        existing_season = Season.objects.filter(api_id=api_id)
-        if len(existing_season):
-            try:
-                season = existing_season[0]
-                season.name = name
-                entries['updated'] += 1
-                season.save()
-            except:
-                entries['in_error'].append(season)
-        else:
-            try:
-                season = Season(api_id=api_id, 
-                                name=name, 
-                                start_date=start_date, 
-                                end_date=end_date,
-                                year=year,
-                                competition=competition,
-                                )
-                season.save()
-                entries['imported'] += 1
-            except:
-                entries['in_error'].append(season)
+        _update_from_API(Season, entries, 
+                        filter_fields={'api_id': api_id},
+                        change_fields={'name': name},
+                        fixed_fields={'start_date': start_date, 
+                                      'end_date': end_date,
+                                      'year': year,
+                                      'competition_id': competition_id,
+                                      })
     
-    _log.info('Seasons entries : ' + str(entries))
+    print('Seasons entries : ' + str(entries))
+
+def load_teams(season_id):
+    season_json = API.get_season_information(season_id).json()
+
+    entries = {
+        'imported': 0,
+        'updated': 0,
+        'in_error': [],
+    }
+    for team in season_json['stages'][0]['groups'][0]['competitors']:
+        api_id = team['id'] if team.get('id') else ''
+        name = team['name'] if team.get('name') else ''
+        country = team['country'] if team.get('country') else ''
+        country_code = team['country_code'] if team.get('country_code') else ''
+        abbreviation = team['abbreviation'] if team.get('abbreviation') else ''
+
+        filter_fields = {
+            'api_id': api_id,
+            'name': name,
+        }
+        change_fields = {
+            'country': country,
+            'country_code': country_code,
+        }
+        fixed_fields = {
+            'abbreviation': abbreviation,
+        }
+
+        _update_from_API(Team, entries=entries, filter_fields=filter_fields, change_fields=change_fields, fixed_fields=fixed_fields)
     print('Seasons entries : ' + str(entries))
 
 
 
 
 
-if __name__ == "__main__":
-    if sys.argv[1] == 'fetch':
-        fetch_data_json()
+
