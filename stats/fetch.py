@@ -4,7 +4,7 @@ import json
 
 from datetime import datetime
 
-from stats.models import SportEvent, Competition, Season, Team, Player, Statistics  
+from stats.models import SportEvent, Competition, Season, Team, Player, Statistic, Venue  
 from connector import connectors
 
 
@@ -16,7 +16,7 @@ param filter_fields: requested fields to recognize duplicates
 param change_fields: fields that will be updated
 param fixed_fields: fields that wont be updated, but used at creation
 """
-def _update_from_API(model, entries={}, 
+def _update_or_create(model, entries={}, 
                     filter_fields=None, 
                     change_fields=None, 
                     fixed_fields=None):
@@ -27,14 +27,15 @@ def _update_from_API(model, entries={},
             setattr(existing_obj, key, value)      
         existing_obj.save()
         entries['updated'] += 1
-
+        return existing_obj.id
     except model.DoesNotExist:
         new_obj = model(**filter_fields, **change_fields, **fixed_fields)
         new_obj.save()
         entries['imported'] += 1
+        return new_obj.id
     except Exception: 
         entries['in_error'].append(Exception + str(filter_fields))
-
+        return None
 
 def fetch_data_json():
     conn = http.client.HTTPSConnection("api.sportradar.com")
@@ -87,7 +88,7 @@ def load_competitions():
     for competition in comp_json['competitions']:
         api_id = competition['id'] if competition.get('id') else ''
         name = competition['name'] if competition.get('name') else ''
-        _update_from_API(Competition, entries, 
+        _update_or_create(Competition, entries, 
                         filter_fields={'api_id': api_id},
                         change_fields={'name': name}
                         )
@@ -110,7 +111,7 @@ def load_competition_seasons(competition):
         year = season['year'] if season.get('year') else ''
         competition_id = Competition.objects.get(api_id = competition)
 
-        _update_from_API(Season, entries, 
+        _update_or_create(Season, entries, 
                         filter_fields={'api_id': api_id},
                         change_fields={'name': name},
                         fixed_fields={'start_date': start_date, 
@@ -123,7 +124,7 @@ def load_competition_seasons(competition):
 
 def load_teams(season_id):
     season_json = API.get_season_information(season_id).json()
-
+    teams=[]
     entries = {
         'imported': 0,
         'updated': 0,
@@ -148,11 +149,123 @@ def load_teams(season_id):
             'abbreviation': abbreviation,
         }
 
-        _update_from_API(Team, entries=entries, filter_fields=filter_fields, change_fields=change_fields, fixed_fields=fixed_fields)
+        obj = _update_or_create(Team, entries=entries, filter_fields=filter_fields, change_fields=change_fields, fixed_fields=fixed_fields)
+        teams.append(obj)
+
     print('Seasons entries : ' + str(entries))
+    return teams
+
+def load_team_players(tid):
+    team_json = API.get_team_profile(tid).json()
+    players=[]
+    entries = {
+        'imported': 0,
+        'updated': 0,
+        'in_error': [],
+    }
+    players_list = team_json['players'] if team_json.get('players') else []
+    for player in players_list:
+        api_id = player['id'] if player.get('id') else ''
+        name = player['name'] if player.get('name') else ''
+        country_code = player['country_code'] if player.get('country_code') else ''
+        jersey_number = player['jersey_number'] if player.get('abbreviation') else 0
+        birthdate = player['date_of_birth'] if player.get('date_of_birth') else None
+        gender = player['gender'] if player.get('gender') else ''
+        height = player['height'] if player.get('height') else 0
+        weight = player['weight'] if player.get('weight') else 0
+        nationality = player['nationality'] if player.get('nationality') else ''
+        player_type = player['type'] if player.get('type') else 'UK'
+        team_id = Team.objects.get(api_id=tid)
+
+        filter_fields = {
+            'api_id': api_id,
+        }
+        change_fields = {
+            'name': name,
+            'jersey_number': jersey_number,
+            'country_code': country_code,
+            'team_id': team_id,
+            'gender': gender,
+            'height': height,
+            'weight': weight,
+            'player_type': player_type,
+            'nationality': nationality,
+        }
+        fixed_fields = {
+            'birthdate': birthdate,
+        }
+
+        obj = _update_or_create(Player, entries=entries, filter_fields=filter_fields, change_fields=change_fields, fixed_fields=fixed_fields)
+        players.append(obj)
+    print('Team {}, players : {}'.format(tid, str(entries)))
 
 
+    #load manager
+    manager = team_json['manager'] if team_json.get('manager') else None
+    if manager:
+        api_id = manager['id'] if manager.get('id') else ''
+        name = manager['name'] if manager.get('name') else ''
+        gender = manager['gender'] if manager.get('gender') else ''
+        country_code = manager['country_code'] if manager.get('country_code') else ''
+        nationality = manager['nationality'] if manager.get('nationality') else ''
+        team_id = Team.objects.get(api_id=tid)
+        player_type = "MG"
+
+        filter_fields = {
+            'api_id': api_id,
+        }
+        change_fields = {
+            'name': name,
+            'country_code': country_code,
+            'team_id': team_id,
+            'gender': gender,
+            'player_type': player_type,
+            'nationality': nationality,
+        }
+        fixed_fields = {}
+        
+        manager_obj = _update_or_create(Player, entries=entries, filter_fields=filter_fields, change_fields=change_fields, fixed_fields=fixed_fields)
+
+        print('Team {}, manager : {}'.format(tid, name))
 
 
+    #load venue
+    venue = team_json['venue'] if team_json.get('venue') else None
+    if venue:
+        api_id = venue['id'] if venue.get('id') else ''
+        name = venue['name'] if venue.get('name') else ''
+        city_name = venue['city_name'] if venue.get('city_name') else ''
+        country_code = venue['country_code'] if venue.get('country_code') else ''
+        country_name = venue['country_name'] if venue.get('country_name') else ''
+        capacity = venue['capacity'] if venue.get('capacity') else 0
+        map_coordinates = venue['map_coordinates'] if venue.get('map_coordinates') else (0,0)
+        team_id = Team.objects.get(api_id=tid)
 
+        filter_fields = {
+            'api_id': api_id,
+        }
+        change_fields = {
+            'name': name,
+            'country_code': country_code,
+            'country_name': country_name,
+            'city_name': city_name,
+            'capacity': capacity,
+            'map_coordinates': map_coordinates,
+            'team_id': team_id,
+        }
+        fixed_fields = {}
+        venue_obj = _update_or_create(Venue, entries=entries, filter_fields=filter_fields, change_fields=change_fields, fixed_fields=fixed_fields)
 
+        print('Team {}, venue : {}'.format(tid, name))
+    
+    return players
+
+def load_teams_and_players(season_id):
+    print('get teams for season %s' % season_id)
+    team_ids = load_teams(season_id)
+
+    for team_id in team_ids:
+        team_obj = Team.objects.get(id=team_id)
+        print('get players for team %s' % team_obj.name)
+
+        players = load_team_players(team_obj.api_id)

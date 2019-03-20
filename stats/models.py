@@ -93,20 +93,21 @@ class Player(models.Model):
         max_length=2,
         choices=ROLE_CHOICES,
         default=UNKNOWN,
-    ),
-    birthdate = models.DateField()
+    )
+    gender = models.CharField(max_length=20, default='')
+    birthdate = models.DateField(null=True)
     nationality = models.CharField(max_length=256, default='')
     country_code = models.CharField(max_length=4, default='')
-    height = models.IntegerField()
-    weight = models.IntegerField()
-    jersey_number = models.IntegerField()
+    height = models.IntegerField(null=True)
+    weight = models.IntegerField(null=True)
+    jersey_number = models.IntegerField(null=True)
     team_id = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return self.name + ' - ' + self.team_id.name + ' (' + self.api_id + ')'
 
 
-class Statistics(models.Model):
+class Statistic(models.Model):
     
     player_id = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
     game_id = models.ForeignKey('SportEvent', on_delete=models.SET_NULL, null=True)
@@ -124,3 +125,15 @@ class Statistics(models.Model):
 
     def __str__(self):
         return self.player.name + ' (' + self.game.name + ')'
+
+class Venue(models.Model):
+    api_id = models.CharField(max_length=256, default='')
+    name = models.CharField(max_length=256, default='')
+    city_name = models.CharField(max_length=256, default='')
+    country_code = models.CharField(max_length=4, default='')
+    country_name = models.CharField(max_length=256, default='')
+    capacity = models.IntegerField()
+    team_id = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
+
+    #TODO : cut it into 2 coordinates
+    map_coordinates = models.CharField(max_length=256, default='')
