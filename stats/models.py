@@ -34,7 +34,7 @@ class Competition(models.Model):
     name = models.CharField(max_length=256, default='')
         
     def __str__(self):
-        return self.name + ' (' + self.api_id + ')'
+        return self.name
 
 
 class Season(models.Model):
@@ -48,7 +48,7 @@ class Season(models.Model):
     team_ids = models.ManyToManyField('Team')
 
     def __str__(self):
-        return self.name + ' (' + self.api_id + ')'
+        return self.name
 
 
 class Team(models.Model):
@@ -61,7 +61,7 @@ class Team(models.Model):
     manager_id = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
     competition_ids = models.ManyToManyField('Competition')
     def __str__(self):
-        return self.name + ' (' + self.api_id + ')'
+        return self.name
 
 
 class Player(models.Model):
@@ -104,7 +104,7 @@ class Player(models.Model):
     team_id = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
-        return self.name + ' - ' + self.team_id.name + ' (' + self.api_id + ')'
+        return self.name
 
 
 class Statistic(models.Model):
@@ -137,3 +137,6 @@ class Venue(models.Model):
 
     #TODO : cut it into 2 coordinates
     map_coordinates = models.CharField(max_length=256, default='')
+
+    def __str__(self):
+        return self.name
