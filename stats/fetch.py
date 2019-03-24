@@ -1,6 +1,7 @@
 import http.client
 import sys
 import json
+from django.utils.timezone import make_aware
 
 from datetime import datetime
 
@@ -16,6 +17,13 @@ param filter_fields: requested fields to recognize duplicates
 param change_fields: fields that will be updated
 param fixed_fields: fields that wont be updated, but used at creation
 """
+
+def utc_fetched_date(date):
+    if date[22] == ':':
+        begin = date[0:-3]
+        end = date[-2:]
+        return begin + end
+    return date
 def _update_or_create(model, entries={}, 
                     filter_fields=None, 
                     change_fields=None, 
@@ -37,44 +45,74 @@ def _update_or_create(model, entries={},
         entries['in_error'].append(Exception + str(filter_fields))
         return None
 
-def fetch_data_json():
-    conn = http.client.HTTPSConnection("api.sportradar.com")
-    api_key = "wumub272m2pku55ws9q9kvp9" 
-    nantes_id =  "sr:competitor:24069"
-    conn.request("GET", "/handball/trial/v2/fr/competitors/%s/summaries.json?api_key=%s" % (nantes_id, api_key) )
+
+def load_season_events(season_api_id):
+    season_json = API.get_season_summaries(season_api_id).json()
+    games = []
+
+    entries = {
+        'imported': 0,
+        'updated': 0,
+        'in_error': [],
+    }
+
+    for summary in season_json['summaries']:
+        if summary.get('sport_event'):
+            event = summary['sport_event']
+            api_id = event.get('id')
+            if event.get('competitors'):
+                home_team = Team.objects.get(api_id = event['competitors'][0]['id'])
+                away_team = Team.objects.get(api_id = event['competitors'][1]['id']) 
+            try:
+                event_date = datetime.strptime(
+                                utc_fetched_date(event['start_time']),
+                                '%Y-%m-%dT%H:%M:%S%z')
+            except: 
+                event_date = None
+            start_time_confirmed = event.get('start_time_confirmed', False)
+            season_id = Season.objects.get(api_id = season_api_id)
+
+            # TODO: differentiate league/cup/finals types of stage
+            # on event['stage'] and event['round']
+
+            
+        if summary.get('sport_event_status'):
+            status = summary['sport_event_status']
+            away_team_score = status.get('away_score', 0)
+            home_team_score = status.get('home_score', 0)
+            winner_id = Team.objects.get(api_id = status['winner_id']) if status.get('winner_id') else None
+            match_status = status.get('match_status', '')
+            
+            # TODO: have "scores class"
+            # if status.get('period_scores'):
+            #     for period in status['period_scores']:
+
+        # TODO: fetch statistics
+        # if summary.get('statistics'):
+           
 
 
-    res = conn.getresponse()
-    data = res.read()
+        filter_fields = {
+            'api_id': api_id,
+        }
+        change_fields = {
+            'home_team': home_team,
+            'away_team': away_team,
+            'event_date': event_date,
+            'start_time_confirmed': start_time_confirmed,
+            'season_id': season_id,
+            'match_status': match_status,
+            'away_team_score': away_team_score,
+            'home_team_score': home_team_score,
+            'winner_id': winner_id,
+        }
+        fixed_fields = {}
 
-    f = open(DATA_FILE, 'w+')
-    f.write(data.decode("utf-8"))
+        obj = _update_or_create(SportEvent, entries=entries, filter_fields=filter_fields, change_fields=change_fields, fixed_fields=fixed_fields)
+        games.append(obj)
 
-    f.close()
-    return f
-
-def load_data_json():
-    f = open(DATA_FILE, 'r')
-    f_json = json.load(f)
-    
-    games = f_json['summaries']
-    for game in games:
-        home_team = game['sport_event']['competitors'][0]['name'] if game['sport_event']['competitors'] else '<home_team>'
-        away_team = game['sport_event']['competitors'][1]['name'] if game['sport_event']['competitors'] else '<away_team>'
-        away_team_score = game['sport_event_status']['away_score'] if game['sport_event_status'].get('away_score') else 0
-        home_team_score = game['sport_event_status']['home_score'] if game['sport_event_status'].get('home_score') else 0
-        competition_name = game['sport_event']['sport_event_context']['competition']['name'] if game['sport_event']['sport_event_context'] else '<Competition_name>'
-
-        date = game['sport_event']['start_time'] 
-        event_date = datetime.strptime(date[0:10],'%Y-%m-%d') or None
-        
-        event = SportEvent(home_team=home_team, 
-                            away_team=away_team, 
-                            away_team_score=away_team_score, 
-                            home_team_score=home_team_score,
-                            competition_name=competition_name,
-                            event_date=event_date)
-        event.save()
+    print('Seasons entries : ' + str(entries))
+    return games
 
 
 def load_competitions():
@@ -86,8 +124,8 @@ def load_competitions():
         'in_error': [],
     }
     for competition in comp_json['competitions']:
-        api_id = competition['id'] if competition.get('id') else ''
-        name = competition['name'] if competition.get('name') else ''
+        api_id = competition.get('id', '')
+        name = competition.get('name', '')
         _update_or_create(Competition, entries, 
                         filter_fields={'api_id': api_id},
                         change_fields={'name': name}
@@ -104,11 +142,11 @@ def load_competition_seasons(competition):
         'in_error': [],
     }
     for season in seasons_json['seasons']:
-        api_id = season['id'] if season.get('id') else ''
-        name = season['name'] if season.get('name') else ''
-        start_date = season['start_date'] if season.get('start_date') else ''
-        end_date = season['end_date'] if season.get('end_date') else ''
-        year = season['year'] if season.get('year') else ''
+        api_id = season.get('id', '')
+        name = season.get('name', '')
+        start_date = season.get('start_date', '')
+        end_date = season.get('end_date', '')
+        year = season.get('year', '')
         competition_id = Competition.objects.get(api_id = competition)
 
         _update_or_create(Season, entries, 
@@ -130,32 +168,34 @@ def load_teams(season_id):
         'updated': 0,
         'in_error': [],
     }
-    for team in season_json['stages'][0]['groups'][0]['competitors']:
-        api_id = team['id'] if team.get('id') else ''
-        name = team['name'] if team.get('name') else ''
-        country = team['country'] if team.get('country') else ''
-        country_code = team['country_code'] if team.get('country_code') else ''
-        abbreviation = team['abbreviation'] if team.get('abbreviation') else ''
+    for stage in season_json['stages']:
+        for group in stage['groups']:
+            for team in group['competitors']:
+                api_id = team.get('id', '')
+                name = team.get('name', '')
+                country = team.get('country', '')
+                country_code = team.get('country_code', '')
+                abbreviation = team.get('abbreviation', '')
 
-        filter_fields = {
-            'api_id': api_id,
-            'name': name,
-        }
-        change_fields = {
-            'country': country,
-            'country_code': country_code,
-        }
-        fixed_fields = {
-            'abbreviation': abbreviation,
-        }
+                filter_fields = {
+                    'api_id': api_id,
+                    'name': name,
+                }
+                change_fields = {
+                    'country': country,
+                    'country_code': country_code,
+                }
+                fixed_fields = {
+                    'abbreviation': abbreviation,
+                }
 
-        obj = _update_or_create(Team, entries=entries, filter_fields=filter_fields, change_fields=change_fields, fixed_fields=fixed_fields)
-        teams.append(obj)
+                obj = _update_or_create(Team, entries=entries, filter_fields=filter_fields, change_fields=change_fields, fixed_fields=fixed_fields)
+                teams.append(obj)
 
     print('Seasons entries : ' + str(entries))
     return teams
 
-def load_team_players(tid):
+def _load_team_players(tid):
     team_json = API.get_team_profile(tid).json()
     players=[]
     entries = {
@@ -163,18 +203,18 @@ def load_team_players(tid):
         'updated': 0,
         'in_error': [],
     }
-    players_list = team_json['players'] if team_json.get('players') else []
+    players_list = team_json.get('players', [])
     for player in players_list:
-        api_id = player['id'] if player.get('id') else ''
-        name = player['name'] if player.get('name') else ''
-        country_code = player['country_code'] if player.get('country_code') else ''
-        jersey_number = player['jersey_number'] if player.get('abbreviation') else 0
-        birthdate = player['date_of_birth'] if player.get('date_of_birth') else None
-        gender = player['gender'] if player.get('gender') else ''
-        height = player['height'] if player.get('height') else 0
-        weight = player['weight'] if player.get('weight') else 0
-        nationality = player['nationality'] if player.get('nationality') else ''
-        player_type = player['type'] if player.get('type') else 'UK'
+        api_id = player.get('id', '')
+        name = player.get('name', '')
+        country_code = player.get('country_code', '')
+        jersey_number = player.get('abbreviation', 0)
+        birthdate = player.get('date_of_birth', None)
+        gender = player.get('gender', '')
+        height = player.get('height', 0)
+        weight = player.get('weight', 0)
+        nationality = player.get('nationality', '')
+        player_type = player.get('type', 'UK')
         team_id = Team.objects.get(api_id=tid)
 
         filter_fields = {
@@ -201,13 +241,13 @@ def load_team_players(tid):
 
 
     #load manager
-    manager = team_json['manager'] if team_json.get('manager') else None
+    manager = team_json.get('manager', None)
     if manager:
-        api_id = manager['id'] if manager.get('id') else ''
-        name = manager['name'] if manager.get('name') else ''
-        gender = manager['gender'] if manager.get('gender') else ''
-        country_code = manager['country_code'] if manager.get('country_code') else ''
-        nationality = manager['nationality'] if manager.get('nationality') else ''
+        api_id = manager.get('id', '')
+        name = manager.get('name', '')
+        gender = manager.get('gender', '')
+        country_code = manager.get('country_code', '')
+        nationality = manager.get('nationality', '')
         team_id = Team.objects.get(api_id=tid)
         player_type = "MG"
 
@@ -230,15 +270,15 @@ def load_team_players(tid):
 
 
     #load venue
-    venue = team_json['venue'] if team_json.get('venue') else None
+    venue = team_json.get('venue', None)
     if venue:
-        api_id = venue['id'] if venue.get('id') else ''
-        name = venue['name'] if venue.get('name') else ''
-        city_name = venue['city_name'] if venue.get('city_name') else ''
-        country_code = venue['country_code'] if venue.get('country_code') else ''
-        country_name = venue['country_name'] if venue.get('country_name') else ''
-        capacity = venue['capacity'] if venue.get('capacity') else 0
-        map_coordinates = venue['map_coordinates'] if venue.get('map_coordinates') else (0,0)
+        api_id = venue.get('id', '')
+        name = venue.get('name', '')
+        city_name = venue.get('city_name', '')
+        country_code = venue.get('country_code', '')
+        country_name = venue.get('country_name', '')
+        capacity = venue.get('capacity', 0)
+        map_coordinates = venue.get('map_coordinates', (0,0))
         team_id = Team.objects.get(api_id=tid)
 
         filter_fields = {
@@ -260,12 +300,18 @@ def load_team_players(tid):
     
     return players
 
-def load_teams_and_players(season_id):
-    print('get teams for season %s' % season_id)
-    team_ids = load_teams(season_id)
+def load_complete_season(season_api_id):
+    """
+    Will make N API calls, where 
+    N = number of teams in the season + 2
+    """
+    print('get teams for season %s' % season_api_id)
+    team_ids = load_teams(season_api_id)
 
     for team_id in team_ids:
         team_obj = Team.objects.get(id=team_id)
         print('get players for team %s' % team_obj.name)
 
-        players = load_team_players(team_obj.api_id)
+        players = _load_team_players(team_obj.api_id)
+
+    load_season_events(season_api_id)

@@ -4,28 +4,19 @@ from django.utils import timezone
 
 
 class SportEvent(models.Model):
-    
+    api_id = models.CharField(max_length=256, default='') 
     home_team = models.ForeignKey('Team', related_name='home_team', on_delete=models.SET_NULL, null=True)
     away_team = models.ForeignKey('Team', related_name='away_team', on_delete=models.SET_NULL, null=True)
     home_team_score = models.IntegerField(default=0)
     away_team_score = models.IntegerField(default=0)
-    competition_name = models.ForeignKey('Competition', on_delete=models.SET_NULL, null=True)
-    event_date = models.DateField(null=True)
-    
+    season_id = models.ForeignKey('Season', on_delete=models.SET_NULL, null=True)
+    event_date = models.DateTimeField(null=True)
+    start_time_confirmed = models.BooleanField(default='False')
+    match_status = models.CharField(max_length=256, default='') 
+    winner_id = models.ForeignKey('Team', related_name='winner', on_delete=models.SET_NULL, null=True)
     def __str__(self):
-        return self.home_team + ' ' + str(self.home_team_score) + ' - ' + str(self.away_team_score) + ' ' + self.away_team
+        return self.home_team.name + ' ' + str(self.home_team_score) + ' - ' + str(self.away_team_score) + ' ' + self.away_team.name
 
-    # def __unicode__(self):
-    #     return 
-
-    def get_winner(self):
-        if self.home_team_score > self.away_team_score:
-            winner = self.home_team
-        elif self.home_team_score < self.away_team_score:
-            winner = self.away_team
-        else:
-            winner = 'Draw'
-        return winner
 
 
 class Competition(models.Model):
