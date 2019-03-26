@@ -50,7 +50,8 @@ class Team(models.Model):
     country_code = models.CharField(max_length=4, default='')
     abbreviation = models.CharField(max_length=10, default='')
     manager_id = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
-    competition_ids = models.ManyToManyField('Competition')
+    venue_id = models.ForeignKey('Venue', on_delete=models.SET_NULL, null=True)
+    season_ids = models.ManyToManyField('Season')
     def __str__(self):
         return self.name
 
@@ -100,22 +101,22 @@ class Player(models.Model):
 
 class Statistic(models.Model):
     
-    player_id = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
-    game_id = models.ForeignKey('SportEvent', on_delete=models.SET_NULL, null=True)
-    yellow_cards = models.IntegerField()
-    red_cards = models.IntegerField()
-    suspensions = models.IntegerField()
-    goals_scored = models.IntegerField()
-    seven_m_goals = models.IntegerField()
-    field_goals = models.IntegerField()
-    assists = models.IntegerField()
-    technical_fouls = models.IntegerField()
-    steals = models.IntegerField()
-    blocks = models.IntegerField()
-    saves = models.IntegerField()
+    player_id = models.ForeignKey(Player, on_delete=models.SET_NULL, null=True)
+    game_id = models.ForeignKey(SportEvent, on_delete=models.SET_NULL, null=True)
+    yellow_cards = models.IntegerField(null=True)
+    red_cards = models.IntegerField(null=True)
+    suspensions = models.IntegerField(null=True)
+    goals_scored = models.IntegerField(null=True)
+    seven_m_goals = models.IntegerField(null=True)
+    field_goals = models.IntegerField(null=True)
+    assists = models.IntegerField(null=True)
+    technical_fouls = models.IntegerField(null=True)
+    steals = models.IntegerField(null=True)
+    blocks = models.IntegerField(null=True)
+    saves = models.IntegerField(null=True)
 
     def __str__(self):
-        return self.player.name + ' (' + self.game.name + ')'
+        return str(self.player_id) + ' (' + str(self.game_id) + ')'
 
 class Venue(models.Model):
     api_id = models.CharField(max_length=256, default='')
