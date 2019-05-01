@@ -3,3 +3,5 @@
 fetchenv/
 connector/api_key.txt
 .vscode/
+Fantasy/settings.py
+db.sqlite3
