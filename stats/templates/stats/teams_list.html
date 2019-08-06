@@ -1,0 +1,25 @@
+{% extends "app.html" %}
+{% block title %}Teams{% endblock %}
+
+{% block body%}
+  <h1 class="alert alert-success">All teams</h1>
+  <div class="card-columns">
+    {% for team in teams %}
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">{{ team.name }} ({{ team.abbreviation }})</h5>
+          {% if team.manager_id %}
+            <div class="card-subtitle mb-2 text-muted">Coach : {{ team.manager_id.name }}</div>
+          {% endif %}
+            <div class="card-text"> country : {{ team.country }} </div>
+          {% if team.manager_id %}
+            <div class="card-text"> venue : {{ team.venue_id }} </div>
+          {% endif %}
+
+          <a href="./{{team.id}}/detail/" class="card-link">More details</a>
+        </div>
+      </div>      
+    {% endfor %}
+  </div>      
+{% endblock %}
+

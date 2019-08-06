@@ -1,5 +1,5 @@
 from django.shortcuts import render
-
+from .models import Team
 from django.http import HttpResponse
 
 # import stats.models as models
@@ -17,3 +17,12 @@ def load(request):
 def results(request, team):
     response = "You're looking at the dashboard of %s."
     return HttpResponse(response % team)
+
+def teams_list(request):
+    teams = Team.objects.all()
+    return render(request, 'stats/teams_list.html', {'teams': teams})
+
+def team_detail(request, id):
+    team = Team.objects.get(id=id)
+    return render(request, 'stats/team_detail.html', {'team': team})
+
