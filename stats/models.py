@@ -32,8 +32,8 @@ class Season(models.Model):
     
     api_id = models.CharField(max_length=256, default='') 
     name = models.CharField(max_length=256, default='')
-    start_date = models.DateField()
-    end_date = models.DateField()
+    start_date = models.DateField(null=True)
+    end_date = models.DateField(null=True)
     year = models.CharField(max_length=10)
     competition_id = models.ForeignKey('Competition', on_delete=models.SET_NULL, null=True)
     team_ids = models.ManyToManyField('Team')
@@ -124,7 +124,7 @@ class Venue(models.Model):
     city_name = models.CharField(max_length=256, default='')
     country_code = models.CharField(max_length=4, default='')
     country_name = models.CharField(max_length=256, default='')
-    capacity = models.IntegerField()
+    capacity = models.IntegerField(null=True)
     team_id = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
 
     #TODO : cut it into 2 coordinates

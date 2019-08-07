@@ -16,7 +16,7 @@ class HandballV2API(object):
     """Sportradar API to connect to Handball data"""
 
     def __init__(self, api_key='',
-                 access_level='trial', timeout=5, sleep_time=1.2):
+                 access_level='trial', timeout=30, sleep_time=1.2):
         """ Sportradar Handball V2 API Constructor
 
         :param api_key: key provided by Sportradar
