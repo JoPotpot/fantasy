@@ -6,3 +6,5 @@ connector/api_key.txt
 Fantasy/settings.py
 db.sqlite3
 staticfiles/
+
+.python-version

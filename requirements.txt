@@ -1,1 +1,5 @@
 requests
+django
+psycopg2 # postgres required on the machine
+
+ipython # confort !

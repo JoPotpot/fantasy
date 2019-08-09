@@ -27,7 +27,7 @@ def utc_fetched_date(date):
 
 def _log(obj, created):
     action = "created" if created else "updated"
-    print("{} - {} - has been {}.".format(obj.__class__.__name__, str(obj), action))
+    print("{} - {} ({})- has been {}.".format(obj.__class__.__name__, str(obj), str(obj.api_id) or '', action))
 
 def load_competitions():
     comp_json = API.get_competitions_list().json()
