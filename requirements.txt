@@ -1,5 +1,6 @@
-requests
 django
+requests
 psycopg2 # postgres required on the machine
 
 ipython # confort !
+Pillow # images
