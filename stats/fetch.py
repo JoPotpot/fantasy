@@ -5,7 +5,7 @@ from django.utils.timezone import make_aware
 
 from datetime import datetime
 
-from stats.models import SportEvent, Competition, Season, Team, Player, Statistic, Venue  
+from stats.models import OfficialSportEvent, OfficialCompetition, OfficialSeason, OfficialTeam, OfficialPlayer, OfficialStatistic, OfficialVenue  
 from connector import connectors
 
 

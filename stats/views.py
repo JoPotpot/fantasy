@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Team
+from .models import OfficialTeam as Team
 from django.contrib.auth.decorators import login_required
 
 @login_required

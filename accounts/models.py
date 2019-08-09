@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 
-from stats import models as stats_models
+from base import models as Abstracts
 
 class FantasyPlayer(models.Model):
 
@@ -14,4 +14,5 @@ class FantasyPlayer(models.Model):
         verbose_name = _('Joueur')
         verbose_name_plural = _('Joueurs')
 
-class FantasyTeam(stats_models.Team):
+class FantasyTeam(Abstracts.Team):
+    pass
