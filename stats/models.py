@@ -1,31 +1,33 @@
 from django.db import models
 from django.utils import timezone
-from base import models as Abstracts
+
+from django.utils.translation import ugettext_lazy as _
+from base import models as base_models
 
 
-class OfficialSportEvent(Abstracts.SportEvent):
+class OfficialSportEvent(base_models.SportEvent):
     pass
 
 
-class OfficialCompetition(Abstracts.Competition):
+class OfficialCompetition(base_models.Competition):
     pass
 
 
-class OfficialSeason(Abstracts.Season):
+class OfficialSeason(base_models.Season):
     pass
 
 
-class OfficialTeam(Abstracts.Team):
+class OfficialTeam(base_models.Team):
     pass
 
 
-class OfficialPlayer(Abstracts.Player):
+class OfficialPlayer(base_models.Player):
     pass
 
     
-class OfficialStatistic(Abstracts.Statistic):
+class OfficialStatistic(base_models.Statistic):
     pass
 
 
-class OfficialVenue(Abstracts.Venue):
+class OfficialVenue(base_models.Venue):
     pass

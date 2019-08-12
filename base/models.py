@@ -9,16 +9,13 @@ class SportEvent(models.Model):
     away_team = models.ForeignKey('Team', related_name='away_team', on_delete=models.SET_NULL, null=True)
     home_team_score = models.IntegerField(default=0)
     away_team_score = models.IntegerField(default=0)
-    season_id = models.ForeignKey('Season', on_delete=models.SET_NULL, null=True)
+    season = models.ForeignKey('Season', on_delete=models.SET_NULL, null=True)
     event_date = models.DateTimeField(null=True)
     start_time_confirmed = models.BooleanField(default='False')
     match_status = models.CharField(max_length=256, default='') 
-    winner_id = models.ForeignKey('Team', related_name='winner', on_delete=models.SET_NULL, null=True)
+    winner = models.ForeignKey('Team', related_name='winner', on_delete=models.SET_NULL, null=True)
     def __str__(self):
         return self.home_team.name + ' ' + str(self.home_team_score) + ' - ' + str(self.away_team_score) + ' ' + self.away_team.name
-    class Meta:
-        abstract = True
-
 
 
 class Competition(models.Model):
@@ -28,8 +25,6 @@ class Competition(models.Model):
         
     def __str__(self):
         return self.name
-    class Meta:
-        abstract = True
 
 
 class Season(models.Model):
@@ -39,13 +34,11 @@ class Season(models.Model):
     start_date = models.DateField(null=True)
     end_date = models.DateField(null=True)
     year = models.CharField(max_length=10)
-    competition_id = models.ForeignKey('Competition', on_delete=models.SET_NULL, null=True)
-    team_ids = models.ManyToManyField('Team')
+    competition = models.ForeignKey('Competition', on_delete=models.SET_NULL, null=True)
+    teams = models.ManyToManyField('Team')
 
     def __str__(self):
         return self.name
-    class Meta:
-        abstract = True
 
 
 class Team(models.Model):
@@ -55,13 +48,11 @@ class Team(models.Model):
     country = models.CharField(max_length=64, default='')
     country_code = models.CharField(max_length=4, default='')
     abbreviation = models.CharField(max_length=10, default='')
-    manager_id = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
-    venue_id = models.ForeignKey('Venue', on_delete=models.SET_NULL, null=True)
-    season_ids = models.ManyToManyField('Season')
+    manager = models.OneToOneField('Player', related_name = 'manager', on_delete=models.SET_NULL, null=True)
+    venue = models.OneToOneField('Venue', on_delete=models.SET_NULL, null=True)
+    seasons = models.ManyToManyField('Season')
     def __str__(self):
         return self.name
-    class Meta:
-        abstract = True
 
 
 class Player(models.Model):
@@ -101,18 +92,16 @@ class Player(models.Model):
     height = models.IntegerField(null=True)
     weight = models.IntegerField(null=True)
     jersey_number = models.IntegerField(null=True)
-    team_id = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
+    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return self.name
-    class Meta:
-        abstract = True
 
 
 class Statistic(models.Model):
     
-    player_id = models.ForeignKey(Player, on_delete=models.SET_NULL, null=True)
-    game_id = models.ForeignKey(SportEvent, on_delete=models.SET_NULL, null=True)
+    player = models.ForeignKey(Player, on_delete=models.SET_NULL, null=True)
+    game = models.ForeignKey(SportEvent, on_delete=models.SET_NULL, null=True)
     yellow_cards = models.IntegerField(null=True)
     red_cards = models.IntegerField(null=True)
     suspensions = models.IntegerField(null=True)
@@ -126,9 +115,7 @@ class Statistic(models.Model):
     saves = models.IntegerField(null=True)
 
     def __str__(self):
-        return str(self.player_id) + ' (' + str(self.game_id) + ')'
-    class Meta:
-        abstract = True
+        return str(self.player) + ' (' + str(self.game) + ')'
 
 
 class Venue(models.Model):
@@ -138,12 +125,10 @@ class Venue(models.Model):
     country_code = models.CharField(max_length=4, default='')
     country_name = models.CharField(max_length=256, default='')
     capacity = models.IntegerField(null=True)
-    team_id = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True)
 
     #TODO : cut it into 2 coordinates
     map_coordinates = models.CharField(max_length=256, default='')
 
     def __str__(self):
         return self.name
-    class Meta:
-        abstract = True
+
