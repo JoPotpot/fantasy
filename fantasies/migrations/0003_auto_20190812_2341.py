@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('base', '0002_auto_20190812_2334'),
-        ('accounts', '0002_auto_20190812_2334'),
+        ('fantasies', '0002_auto_20190812_2334'),
     ]
 
     operations = [
@@ -68,21 +68,21 @@ class Migration(migrations.Migration):
             name='FantasyTeam',
             fields=[
                 ('team_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='base.Team')),
-                ('fantasy_season', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='accounts.FantasySeason')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='accounts.FantasyUser')),
+                ('fantasy_season', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='fantasies.FantasySeason')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='fantasies.FantasyUser')),
             ],
             bases=('base.team',),
         ),
         migrations.AddField(
             model_name='fantasyseason',
             name='creator',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='accounts.FantasyUser'),
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='fantasies.FantasyUser'),
         ),
         migrations.CreateModel(
             name='FantasyPlayer',
             fields=[
                 ('player_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='base.Player')),
-                ('fantasy_team', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='accounts.FantasyTeam')),
+                ('fantasy_team', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='fantasies.FantasyTeam')),
             ],
             bases=('base.player',),
         ),

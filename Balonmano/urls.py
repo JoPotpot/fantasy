@@ -1,4 +1,4 @@
-"""Fantasy URL Configuration
+"""Balonmano URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/dev/topics/http/urls/
@@ -23,6 +23,6 @@ from django.conf import settings
 
 urlpatterns = [
     path('stats/', include('stats.urls')),
-    path('user/', include('accounts.urls')),
+    path('user/', include('fantasies.urls')),
     path('admin/', admin.site.urls),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

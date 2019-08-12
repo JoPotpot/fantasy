@@ -3,7 +3,7 @@
 fetchenv/
 connector/api_key.txt
 .vscode/
-Fantasy/settings.py
+Balonmano/settings.py
 db.sqlite3
 staticfiles/
 
